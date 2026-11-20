@@ -1,0 +1,17 @@
+# 利用者データは絶対にコミットしない
+*.csv
+*.CSV
+*.tsv
+*.xlsx
+*.xls
+
+# 対応表づくりでダウンロードした元データ
+tools/.cache/
+
+# OS・エディタのファイル
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.claude/
+__pycache__/

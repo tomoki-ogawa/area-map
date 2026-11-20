@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>担当エリア可視化ツール</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1f2937; --sub:#6b7280; --line:#e5e7eb;
+    --accent:#0f766e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  header{background:var(--accent);color:#fff;padding:14px 16px}
+  header h1{margin:0;font-size:17px;font-weight:700}
+  header p{margin:2px 0 0;font-size:12px;opacity:.85}
+  main{max-width:980px;margin:0 auto;padding:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+  .card h2{font-size:14px;margin:0 0 8px;color:var(--sub);font-weight:600}
+  .filebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .file{display:flex;gap:8px;align-items:center;min-width:0}
+  .file .icon{width:32px;height:32px;border-radius:8px;background:#ecfdf5;color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:11px;flex:none}
+  .file b{display:block;font-size:14px;overflow-wrap:anywhere}
+  .file span{font-size:12px;color:var(--sub)}
+  .btns{display:flex;gap:6px}
+  button,.upl{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink)}
+  .upl{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .upl input{display:none}
+  .notice{margin-top:8px;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 8px;display:none}
+  .notice.err{color:#991b1b;background:#fef2f2;border-color:#fecaca}
+  .notice details{margin-top:4px}
+  .notice summary{cursor:pointer}
+  .notice ul{margin:4px 0 0;padding-left:18px;max-height:160px;overflow:auto}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .kpi span{font-size:12px;color:var(--sub)}
+  .kpi b{display:block;font-size:22px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .chip{border-radius:999px;padding:5px 11px;font-size:13px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:6px}
+  .chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .chip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+  .mapwrap{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#eef3f1}
+  #map{height:520px;width:100%}
+  .maptools{position:absolute;top:10px;right:10px;z-index:500}
+  .maptools button{box-shadow:0 1px 4px rgba(0,0,0,.2);font-size:12px;padding:5px 8px}
+  .legend{font-size:12px;color:var(--sub);margin-top:6px}
+  .detail{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px;min-height:40px}
+  .detail .ttl{font-weight:700;font-size:15px}
+  .bar{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:13px}
+  .bar .nm{width:5.5em;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar .tr{flex:1;background:#f1f5f9;border-radius:4px;height:12px;overflow:hidden}
+  .bar .fl{height:100%;display:block}
+  .bar .n{width:42px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+  .staffgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px}
+  .staff{border:1px solid var(--line);border-left-width:5px;border-radius:10px;padding:10px 12px}
+  .staff .hd{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+  .staff .hd b{font-size:15px;overflow-wrap:anywhere}
+  .staff .hd span{font-size:20px;font-weight:700}
+  .staff ol{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:#374151}
+  .tblwrap{overflow:auto;max-height:520px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1}
+  thead th{color:var(--sub);font-weight:600;position:sticky;top:0;background:#fff;z-index:2}
+  thead th:first-child{z-index:3}
+  tfoot td{font-weight:700;position:sticky;bottom:0;background:#fff}
+  tbody tr{cursor:pointer}
+  tbody tr.sel td{outline:2px solid var(--ink);outline-offset:-2px}
+  .small{font-size:11.5px;color:var(--sub)}
+  footer{max-width:980px;margin:0 auto;padding:0 12px 24px;font-size:11.5px;color:var(--sub)}
+  footer a{color:inherit}
+
+  /* 地図上の円（円グラフ） */
+  .pie{background:none;border:none}
+  .pie svg{display:block;overflow:visible;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+  .pie .lbl{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:11px;color:#1f2937;font-weight:600;
+            text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;pointer-events:none;display:none}
+  .show-labels .pie .lbl{display:block}
+  .leaflet-popup-content{margin:10px 12px;font-size:13px;min-width:180px}
+  .leaflet-popup-content .ttl{font-weight:700;font-size:14px;margin-bottom:4px}
+  .leaflet-popup-content .bar .nm{width:5em}
+
+  @media (max-width:520px){
+    main{padding:8px}
+    .kpi b{font-size:19px}
+    #map{height:62vh;min-height:340px}
+    .card{padding:10px 10px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>担当エリア可視化ツール</h1>
+  <p>CSVはこのブラウザの中だけで処理します（どこにも送信しません）</p>
+</header>
+<main>
+  <div class="card">
+    <div class="filebar">
+      <div class="file">
+        <div class="icon">CSV</div>
+        <div><b id="fname">dummy_data.csv</b><span id="fmeta"></span></div>
+      </div>
+      <div class="btns">
+        <button id="reset">ダミーに戻す</button>
+        <label class="upl">CSVを選ぶ<input type="file" id="file" accept=".csv,text/csv"></label>
+      </div>
+    </div>
+    <div class="notice" id="notice"></div>
+  </div>
+
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="kpi"><span>利用者数</span><b id="k1">-</b></div>
+    <div class="kpi"><span>郵便番号エリア</span><b id="k2">-</b></div>
+    <div class="kpi"><span>担当者</span><b id="k3">-</b></div>
+  </div>
+
+  <div class="card">
+    <h2>エリアマップ</h2>
+    <div class="chips" id="chips"></div>
+    <div class="mapwrap">
+      <div id="map" role="region" aria-label="郵便番号ごとの利用者分布の地図"></div>
+      <div class="maptools"><button id="fit" type="button">全体を表示</button></div>
+    </div>
+    <div class="legend">円の大きさ＝人数、色の割合＝担当者の内訳。円をタップすると内訳が出ます。拡大すると町名も表示されます。</div>
+    <div class="detail" id="detail"><span class="small">円をタップしてください</span></div>
+  </div>
+
+  <div class="card">
+    <h2>担当者ごとのまとめ</h2>
+    <div class="staffgrid" id="staff"></div>
+  </div>
+
+  <div class="card">
+    <h2>郵便番号 × 担当者（人数）</h2>
+    <div class="tblwrap"><table id="tbl"></table></div>
+    <p class="small">行をタップすると地図がその場所へ移動します。円の位置は郵便番号ごとの代表点（町丁目の中心の平均）で、番地レベルの正確な位置ではありません。</p>
+  </div>
+</main>
+<footer>
+  地図：&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors ／
+  郵便番号の位置：日本郵便「郵便番号データ」と「位置参照情報」（国土交通省）を加工して作成<span id="dataver"></span>
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+"use strict";
+// ------------------------------------------------------------------
+// 郵便番号 → [緯度, 経度, 地名, 精度]（data/zip_coords.json から読み込む）
+//   精度 "t" = 町丁目から算出 / "c" = 市区町村の代表点
+// ------------------------------------------------------------------
+let ZIP = {};
+const PALETTE = ["#2563eb","#ea580c","#16a34a","#9333ea","#db2777","#0891b2","#ca8a04","#4b5563",
+                 "#dc2626","#65a30d","#7c3aed","#0d9488"];
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtZip = z => z.slice(0,3) + "-" + z.slice(3);
+const zipName = z => ZIP[z] ? ZIP[z][2] : "位置不明";
+
+// ダミーデータ生成（再現性のある乱数・架空の人物）
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeDummy(){
+  const rnd = mulberry32(42);
+  const all = ["1900001","1900002","1900003","1900004","1900011","1900012","1900013","1900014",
+               "1900015","1900021","1900022","1900023","1900031","1900032","1900033","1900034"];
+  const plan = [
+    ["佐藤",34,["1900031","1900032","1900033","1900034"]],
+    ["鈴木",30,["1900001","1900002","1900003","1900011"]],
+    ["高橋",28,["1900012","1900013","1900021","1900022","1900023"]],
+    ["田中",22,["1900004","1900014","1900015"]]
+  ];
+  const rows=[]; let id=1001;
+  for(const [name,n,home] of plan){
+    for(let i=0;i<n;i++){
+      const pool = rnd()<0.75?home:all;
+      rows.push({id:"U"+(id++), zip:pool[Math.floor(rnd()*pool.length)], raw:"", staff:name});
+    }
+  }
+  return rows;
+}
+
+// ------------------------------------------------------------------
+// CSV 読み込み
+// ------------------------------------------------------------------
+// 「1900001」「190-0001」「１９０－０００１」「〒190-0001」などを 7 桁に
+function normZip(s){
+  s = (s||"").normalize("NFKC").replace(/[^0-9]/g,"");
+  return s.length===7 ? s : null;
+}
+// ダブルクォート（中のカンマ・改行・"" エスケープ）に対応した CSV パーサ
+function parseCSVText(text){
+  const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; }
+      else f+=c;
+    }else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=""; }
+    else if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n') i++;
+      row.push(f); rows.push(row); row=[]; f="";
+    }else f+=c;
+  }
+  if(f!==""||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function parseCSV(text){
+  const lines = parseCSVText(text.replace(/^﻿/,"")).map(r=>r.map(x=>x.trim())).filter(r=>r.some(x=>x));
+  if(!lines.length) return [];
+  let start=0;
+  // 1行目が見出し（郵便番号として読めない）なら飛ばす
+  if(/郵便|zip|担当|id|番号/i.test(lines[0].join(",")) && !normZip(lines[0][1])) start=1;
+  const rows=[];
+  for(let i=start;i<lines.length;i++){
+    const c=lines[i];
+    if(c.length<2) continue;
+    rows.push({id:c[0]||("行"+(i+1)), zip:normZip(c[1]), raw:c[1]||"", staff:(c[2]||"").trim()||"（未設定）"});
+  }
+  return rows;
+}
+// UTF-8 として読めなければ Shift_JIS として読み直す
+function decodeCSV(buf){
+  try { return new TextDecoder("utf-8",{fatal:true}).decode(buf); }
+  catch(e){ return new TextDecoder("shift_jis").decode(buf); }
+}
+
+// ------------------------------------------------------------------
+// 状態と集計
+// ------------------------------------------------------------------
+let DATA=makeDummy(), FILTER="ALL", SELECTED=null, FILENAME="dummy_data.csv", NEED_FIT=true;
+
+function aggregate(){
+  const staffList=[...new Set(DATA.map(r=>r.staff))];
+  const color={}; staffList.forEach((s,i)=>color[s]=PALETTE[i%PALETTE.length]);
+  const byZip={}, unknown=[], staffCount={};
+  for(const r of DATA){
+    staffCount[r.staff]=(staffCount[r.staff]||0)+1;
+    if(!r.zip||!ZIP[r.zip]){unknown.push(r);continue;}
+    (byZip[r.zip] ||= {total:0,staff:{}});
+    byZip[r.zip].total++;
+    byZip[r.zip].staff[r.staff]=(byZip[r.zip].staff[r.staff]||0)+1;
+  }
+  return {staffList,color,byZip,unknown,staffCount};
+}
+
+// ------------------------------------------------------------------
+// 地図（Leaflet + OpenStreetMap）
+// ------------------------------------------------------------------
+const map = L.map("map",{zoomControl:true, tap:true}).setView([35.68,139.69],9);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+  maxZoom:19,
+  attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+}).addTo(map);
+const layer = L.layerGroup().addTo(map);
+const markers = {};
+let LAST_AGG = null;
+
+function updateLabelVisibility(){
+  map.getContainer().classList.toggle("show-labels", map.getZoom()>=13);
+}
+map.on("zoomend", updateLabelVisibility);
+
+function arc(cx,cy,r,a0,a1){
+  const x0=cx+r*Math.sin(a0), y0=cy-r*Math.cos(a0), x1=cx+r*Math.sin(a1), y1=cy-r*Math.cos(a1);
+  return `M${cx},${cy}L${x0},${y0}A${r},${r} 0 ${a1-a0>Math.PI?1:0} 1 ${x1},${y1}Z`;
+}
+function radius(count){ return Math.min(44, 8+Math.sqrt(count)*4); }
+
+function pieIcon(zip, v, agg){
+  const count = FILTER==="ALL"? v.total : (v.staff[FILTER]||0);
+  const name = esc(ZIP[zip][2]);
+  if(!count){
+    const html=`<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#94a3b8" stroke="#fff" stroke-width="1"/></svg>`;
+    return L.divIcon({className:"pie",html,iconSize:[8,8],iconAnchor:[4,4]});
+  }
+  const r=radius(count), sel=SELECTED===zip, pad=sel?6:2, size=(r+pad)*2, c=r+pad;
+  let s=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+  if(FILTER!=="ALL"){
+    s+=`<circle cx="${c}" cy="${c}" r="${r}" fill="${agg.color[FILTER]}" fill-opacity=".9" stroke="#fff" stroke-width="2"/>`;
+  }else{
+    const parts=agg.staffList.filter(st=>v.staff[st]).map(st=>[st,v.staff[st]]);
+    if(parts.length===1){
+      s+=`<circle cx="${c}" cy="${c}" r="${r}" fill="${agg.color[parts[0][0]]}" stroke="#fff" stroke-width="2"/>`;
+    }else{
+      let a=0;
+      for(const [st,n] of parts){const b=a+n/v.total*Math.PI*2; s+=`<path d="${arc(c,c,r,a,b)}" fill="${agg.color[st]}" stroke="#fff" stroke-width="1"/>`; a=b;}
+      s+=`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#fff" stroke-width="2"/>`;
+    }
+  }
+  if(sel) s+=`<circle cx="${c}" cy="${c}" r="${r+4}" fill="none" stroke="#111827" stroke-width="2"/>`;
+  s+=`<text x="${c}" y="${c+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">${count}</text></svg>`;
+  const html = s + `<div class="lbl" style="top:${size}px">${name}</div>`;
+  return L.divIcon({className:"pie",html,iconSize:[size,size],iconAnchor:[c,c],popupAnchor:[0,-r]});
+}
+
+function breakdownHTML(zip, agg){
+  const v=agg.byZip[zip], z=ZIP[zip];
+  let h=`<div class="ttl">〒${fmtZip(zip)} ${esc(z[2])}　<span class="small">計 ${v.total}人</span></div>`;
+  for(const s of agg.staffList){
+    const n=v.staff[s]||0; if(!n) continue;
+    h+=`<div class="bar"><span class="nm" title="${esc(s)}">${esc(s)}</span><span class="tr"><span class="fl" style="width:${n/v.total*100}%;background:${agg.color[s]}"></span></span><span class="n">${n}人</span></div>`;
+  }
+  if(z[3]==="c") h+=`<div class="small">※この郵便番号は町域が特定できないため、市区町村の代表点に表示しています。</div>`;
+  return h;
+}
+
+function drawMap(agg){
+  layer.clearLayers();
+  for(const k in markers) delete markers[k];
+  // 人数の少ない円を上に重ねる（大きい円の下に隠れないように）
+  const entries=Object.entries(agg.byZip).sort((a,b)=>b[1].total-a[1].total);
+  entries.forEach(([zip,v],i)=>{
+    const z=ZIP[zip];
+    const count = FILTER==="ALL"? v.total : (v.staff[FILTER]||0);
+    const m=L.marker([z[0],z[1]],{icon:pieIcon(zip,v,agg), zIndexOffset: count? i : -100000,
+                                   title:`〒${fmtZip(zip)} ${z[2]} ${count}人`, riseOnHover:true});
+    m.bindPopup(()=>breakdownHTML(zip,agg),{autoPanPadding:[20,20]});
+    m.on("click",()=>select(zip,false));
+    m.addTo(layer);
+    markers[zip]=m;
+  });
+  if(NEED_FIT){ fitAll(agg); NEED_FIT=false; }
+}
+function fitAll(agg){
+  agg = agg || LAST_AGG;
+  map.invalidateSize();
+  const pts=Object.keys(agg.byZip).map(z=>[ZIP[z][0],ZIP[z][1]]);
+  if(pts.length===1) map.setView(pts[0],14);
+  else if(pts.length) map.fitBounds(pts,{padding:[30,30],maxZoom:15});
+}
+document.getElementById("fit").addEventListener("click",()=>fitAll());
+
+// 円・表の行を選んだとき
+function select(zip, fromTable){
+  const prev=SELECTED; SELECTED=zip;
+  const agg=LAST_AGG;
+  for(const z of [prev,zip]){
+    if(z && markers[z] && agg.byZip[z]) markers[z].setIcon(pieIcon(z,agg.byZip[z],agg));
+  }
+  drawDetail(agg);
+  document.querySelectorAll("#tbl tbody tr").forEach(tr=>tr.classList.toggle("sel",tr.dataset.zip===zip));
+  if(fromTable && markers[zip]){
+    const z=ZIP[zip];
+    map.setView([z[0],z[1]], Math.max(map.getZoom(),14));
+    markers[zip].openPopup();
+    document.getElementById("map").scrollIntoView({behavior:"smooth",block:"center"});
+  }
+}
+
+// ------------------------------------------------------------------
+// そのほかの表示（試作版と同じ）
+// ------------------------------------------------------------------
+function drawDetail(agg){
+  const el=document.getElementById("detail");
+  if(!SELECTED||!agg.byZip[SELECTED]){el.innerHTML='<span class="small">円をタップしてください</span>';return;}
+  el.innerHTML=breakdownHTML(SELECTED,agg);
+}
+
+function drawChips(agg){
+  const el=document.getElementById("chips");
+  let h=`<button class="chip ${FILTER==="ALL"?"on":""}" data-f="ALL">全員 ${DATA.length}</button>`;
+  agg.staffList.forEach((s,i)=>{
+    h+=`<button class="chip ${FILTER===s?"on":""}" data-i="${i}"><i style="background:${agg.color[s]}"></i>${esc(s)} ${agg.staffCount[s]}</button>`;
+  });
+  el.innerHTML=h;
+  el.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
+    FILTER = b.dataset.f==="ALL" ? "ALL" : agg.staffList[+b.dataset.i];
+    render();
+  }));
+}
+
+function drawStaff(agg){
+  const el=document.getElementById("staff"), total=DATA.length||1;
+  let h="";
+  for(const s of agg.staffList){
+    const mine=DATA.filter(r=>r.staff===s);
+    const cnt={}; mine.forEach(r=>{const k=r.zip&&ZIP[r.zip]?r.zip:"不明"; cnt[k]=(cnt[k]||0)+1;});
+    const areas=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+    const nAreas=areas.filter(([z])=>z!=="不明").length;
+    const top=areas.slice(0,3).map(([z,n])=>`<li>${z==="不明"?"位置不明":esc(zipName(z))}　${n}人</li>`).join("");
+    h+=`<div class="staff" style="border-left-color:${agg.color[s]}">
+      <div class="hd"><b>${esc(s)}</b><span>${mine.length}<small style="font-size:12px;font-weight:400">人</small></span></div>
+      <div class="small">全体の${(mine.length/total*100).toFixed(0)}%・${nAreas}エリア</div>
+      <ol>${top}</ol></div>`;
+  }
+  el.innerHTML=h;
+}
+
+function drawTable(agg){
+  const el=document.getElementById("tbl");
+  const entries=Object.entries(agg.byZip).sort((a,b)=>b[1].total-a[1].total);
+  const max=Math.max(1,...entries.flatMap(([,v])=>Object.values(v.staff)));
+  let h="<thead><tr><th>エリア</th>"+agg.staffList.map(s=>`<th><span style="color:${agg.color[s]}">●</span>${esc(s)}</th>`).join("")+"<th>計</th></tr></thead><tbody>";
+  for(const [zip,v] of entries){
+    h+=`<tr data-zip="${zip}" class="${SELECTED===zip?"sel":""}"><td>${esc(ZIP[zip][2])} <span class="small">${fmtZip(zip)}</span></td>`;
+    for(const s of agg.staffList){
+      const n=v.staff[s]||0;
+      h+=`<td style="background:${n?hexA(agg.color[s],0.08+0.5*n/max):"transparent"}">${n||"·"}</td>`;
+    }
+    h+=`<td><b>${v.total}</b></td></tr>`;
+  }
+  const located=s=>DATA.filter(r=>r.staff===s&&r.zip&&ZIP[r.zip]).length;
+  h+="</tbody><tfoot><tr><td>合計</td>"+agg.staffList.map(s=>`<td>${located(s)}</td>`).join("")+`<td>${DATA.length-agg.unknown.length}</td></tr></tfoot>`;
+  el.innerHTML=h;
+  el.querySelectorAll("tbody tr").forEach(tr=>tr.addEventListener("click",()=>select(tr.dataset.zip,true)));
+}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a.toFixed(2)})`;}
+
+function drawNotice(agg){
+  const nt=document.getElementById("notice");
+  nt.className="notice";
+  if(!agg.unknown.length){ nt.style.display="none"; return; }
+  const ex=agg.unknown.slice(0,3).map(r=>`${esc(r.id)} ${r.zip?fmtZip(r.zip):("「"+esc(r.raw)+"」形式不正")}`).join("、");
+  const list=agg.unknown.slice(0,500).map(r=>`<li>${esc(r.id)}：${r.zip?fmtZip(r.zip)+"（対応表にない郵便番号）":"「"+esc(r.raw)+"」（郵便番号として読めません）"}・${esc(r.staff)}</li>`).join("");
+  nt.style.display="block";
+  nt.innerHTML=`位置不明が <b>${agg.unknown.length}件</b> あります（例：${ex}）。地図と表には含めていません。`+
+    `対象は東京都・埼玉県・神奈川県・千葉県の郵便番号です。`+
+    `<details><summary>位置不明の一覧を見る</summary><ul>${list}</ul>${agg.unknown.length>500?'<div>（先頭500件のみ表示）</div>':''}</details>`;
+}
+
+function render(){
+  const agg=aggregate(); LAST_AGG=agg;
+  if(SELECTED && !agg.byZip[SELECTED]) SELECTED=null;
+  document.getElementById("fname").textContent=FILENAME;
+  document.getElementById("fmeta").textContent=`${DATA.length}件を読み込み`;
+  document.getElementById("k1").textContent=DATA.length;
+  document.getElementById("k2").textContent=Object.keys(agg.byZip).length;
+  document.getElementById("k3").textContent=agg.staffList.length;
+  drawNotice(agg); drawChips(agg); drawMap(agg); drawDetail(agg); drawStaff(agg); drawTable(agg);
+}
+
+function showError(msg){
+  const nt=document.getElementById("notice");
+  nt.className="notice err"; nt.style.display="block"; nt.textContent=msg;
+}
+
+document.getElementById("file").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  f.arrayBuffer().then(buf=>{
+    const rows=parseCSV(decodeCSV(buf));
+    if(!rows.length){ showError("読み込める行がありませんでした。「ID,郵便番号,担当者」の3列のCSVを選んでください。"); return; }
+    DATA=rows; FILENAME=f.name; FILTER="ALL"; SELECTED=null; NEED_FIT=true; render();
+  }).catch(()=>showError("ファイルを読み込めませんでした。"));
+});
+document.getElementById("reset").addEventListener("click",()=>{
+  DATA=makeDummy(); FILENAME="dummy_data.csv"; FILTER="ALL"; SELECTED=null; NEED_FIT=true;
+  document.getElementById("file").value=""; render();
+});
+
+// 対応表を読み込んでから描画
+fetch("data/zip_coords.json")
+  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d=>{
+    ZIP=d.zips;
+    if(d.generated) document.getElementById("dataver").textContent=`（対応表 ${d.generated} 作成）`;
+    updateLabelVisibility();
+    SELECTED="1900031";
+    render();
+  })
+  .catch(()=>showError("郵便番号の対応表（data/zip_coords.json）を読み込めませんでした。ファイルを直接ダブルクリックで開いた場合は、README の「手元で動かす」の手順で開いてください。"));
+</script>
+</body>
+</html>
