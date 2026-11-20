@@ -34,11 +34,12 @@
   .notice details{margin-top:2px}
   .notice summary{cursor:pointer}
   .notice ul{margin:4px 0 0;padding-left:18px;max-height:160px;overflow:auto}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpis.k4{grid-template-columns:repeat(4,1fr)}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .kpi span{font-size:12px;color:var(--sub)}
   .kpi b{display:block;font-size:22px}
-  .tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--line)}
   .tab{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;font-size:14px;font-weight:600;color:var(--sub)}
   .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
@@ -116,7 +117,9 @@
 
   @media (max-width:520px){
     main{padding:8px}
-    .kpis{grid-template-columns:repeat(2,1fr)}
+    .kpis.k4{grid-template-columns:repeat(2,1fr)}
+    .kpi{padding:8px 10px}
+    .btns{flex-wrap:wrap}
     .kpi b{font-size:19px}
     #map{height:62vh;min-height:340px}
     .card{padding:10px 10px}
@@ -133,6 +136,11 @@
   <p>CSVはこのブラウザの中だけで処理します（どこにも送信しません）</p>
 </header>
 <main>
+  <div class="tabs" role="tablist">
+    <button class="tab on" role="tab" data-m="area" type="button">エリア（顧客数）</button>
+    <button class="tab" role="tab" data-m="route" type="button">訪問ルート</button>
+  </div>
+
   <div class="card">
     <div class="filebar">
       <div class="file">
@@ -140,26 +148,18 @@
         <div><b id="fname">dummy_data.csv</b><span id="fmeta"></span></div>
       </div>
       <div class="btns">
-        <button id="reset">ダミーに戻す</button>
+        <button id="tpl" type="button">ひな形をダウンロード</button>
+        <button id="reset" type="button">ダミーに戻す</button>
         <label class="upl">CSVを選ぶ<input type="file" id="file" accept=".csv,text/csv"></label>
       </div>
     </div>
-    <div class="small" style="margin-top:6px">CSVの列：<b>ID（顧客ID）, 訪問日, 開始時間, 郵便番号, 担当者</b></div>
+    <div class="small" style="margin-top:6px" id="colhint"></div>
     <div class="notice" id="notice"></div>
   </div>
 
-  <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><span>顧客数</span><b id="k1">-</b></div>
-    <div class="kpi"><span>訪問件数</span><b id="k4">-</b></div>
-    <div class="kpi"><span>郵便番号エリア</span><b id="k2">-</b></div>
-    <div class="kpi"><span>担当者</span><b id="k3">-</b></div>
-  </div>
+  <div class="kpis" id="kpis" style="margin-bottom:12px"></div>
 
   <div class="card">
-    <div class="tabs" role="tablist">
-      <button class="tab on" role="tab" data-m="area" type="button">エリア（顧客数）</button>
-      <button class="tab" role="tab" data-m="route" type="button">訪問ルート</button>
-    </div>
     <div class="routebar" id="routebar" style="display:none">
       <button id="dPrev" type="button" aria-label="前の日">◀</button>
       <select id="dateSel" aria-label="訪問日"></select>
@@ -229,7 +229,7 @@ const estMinutes = km => km*ROAD_FACTOR/SPEED_KMH*60;
 
 // ダミーデータ生成（再現性のある乱数・架空の顧客と担当者）
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-function makeDummy(){
+function makeDummyRoute(){
   const rnd = mulberry32(42);
   const all = ["1900001","1900002","1900003","1900004","1900011","1900012","1900013","1900014",
                "1900015","1900021","1900022","1900023","1900031","1900032","1900033","1900034"];
@@ -260,6 +260,58 @@ function makeDummy(){
     }
   });
   return rows;
+}
+
+// エリア用ダミー：訪問ルート用ダミーの顧客を「ID, 郵便番号, 担当者」に直したもの（1顧客1行）
+function makeDummyArea(){
+  const seen=new Set(), rows=[];
+  for(const r of makeDummyRoute()){
+    if(seen.has(r.id)) continue;
+    seen.add(r.id);
+    rows.push({id:r.id, zip:r.zip, raw:"", staff:r.staff, row:rows.length+2, date:null, min:null, dtBad:false, rawDt:""});
+  }
+  return rows;
+}
+
+// ------------------------------------------------------------------
+// ひな形CSV（架空のデータ。ブラウザ内で作ってダウンロードさせる。ファイルとしては保存していない）
+// ------------------------------------------------------------------
+const TEMPLATES = {
+  area: {
+    file: "ひな形_エリア（顧客数）.csv",
+    rows: [
+      ["ID","郵便番号","担当者"],
+      ["C0001","190-0001","佐藤"],
+      ["C0002","190-0002","佐藤"],
+      ["C0003","190-0003","鈴木"],
+      ["C0004","190-0011","鈴木"],
+      ["C0005","190-0012","高橋"],
+      ["C0006","190-0013","高橋"]
+    ]
+  },
+  route: {
+    file: "ひな形_訪問ルート.csv",
+    rows: [
+      ["ID","訪問日","開始時間","郵便番号","担当者"],
+      ["C0001","2026/11/16","09:00","190-0001","佐藤"],
+      ["C0002","2026/11/16","10:30","190-0002","佐藤"],
+      ["C0003","2026/11/16","13:00","190-0031","佐藤"],
+      ["C0004","2026/11/16","09:30","190-0012","鈴木"],
+      ["C0005","2026/11/16","11:00","190-0013","鈴木"],
+      ["C0001","2026/11/17","09:15","190-0001","佐藤"],
+      ["C0004","2026/11/17","10:00","190-0012","鈴木"]
+    ]
+  }
+};
+function downloadTemplate(kind){
+  const t=TEMPLATES[kind];
+  // 先頭に BOM を付けた UTF-8 にして、Excel で開いても文字化けしないようにする
+  const text="﻿"+t.rows.map(r=>r.join(",")).join("\r\n")+"\r\n";
+  const url=URL.createObjectURL(new Blob([text],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a");
+  a.href=url; a.download=t.file;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 // ------------------------------------------------------------------
@@ -318,7 +370,7 @@ function parseCSVText(text){
   return rows;
 }
 // 見出し行から列の位置を決める。見出しがなければ列数で決める
-//   5列以上: ID,訪問日,開始時間,郵便番号,担当者 ／ 3列: ID,郵便番号,担当者（旧形式・ルートなし）
+//   5列以上: ID,訪問日,開始時間,郵便番号,担当者（訪問ルート用） ／ 3列: ID,郵便番号,担当者（エリア用）
 function detectColumns(first, hasHeader, ncols){
   const idx = {id:-1,date:-1,time:-1,zip:-1,staff:-1};
   if(hasHeader){
@@ -334,15 +386,18 @@ function detectColumns(first, hasHeader, ncols){
   }
   return ncols>=5 ? {id:0,date:1,time:2,zip:3,staff:4} : {id:0,date:-1,time:-1,zip:1,staff:2};
 }
-function parseCSV(text){
+// kind: "area" = ID,郵便番号,担当者（3列） ／ "route" = ID,訪問日,開始時間,郵便番号,担当者（5列）
+// 戻り値：{rows, hasDt}（hasDt：訪問日と開始時間の列があったか）
+function parseCSV(text, kind){
   const lines = parseCSVText(text.replace(/^﻿/,"")).map(r=>r.map(x=>x.trim())).filter(r=>r.some(x=>x));
-  if(!lines.length) return [];
+  if(!lines.length) return {rows:[], hasDt:false};
   const first = lines[0];
   // 見出し判定：見出しらしい語を含み、郵便番号として読めるセルがない
   const hasHeader = /ID|顧客|訪問|日付|時間|時刻|開始|郵便|担当|zip/i.test(first.join(",")) && !first.some(c=>normZip(c));
   const maxCols = Math.max(...lines.slice(hasHeader?1:0, 50).map(r=>r.length), first.length);
   const idx = detectColumns(first, hasHeader, maxCols);
   const hasDt = idx.date>=0 && idx.time>=0;
+  const useDt = hasDt && kind==="route";     // エリア用では訪問日・開始時間は読まない
   const rows=[];
   for(let i=hasHeader?1:0;i<lines.length;i++){
     const c=lines[i];
@@ -350,14 +405,14 @@ function parseCSV(text){
     const r = {id:c[idx.id]||("行"+(i+1)), zip:normZip(c[idx.zip]), raw:c[idx.zip]||"",
                staff:(c[idx.staff]||"").trim()||"（未設定）", row:i+1, date:null, min:null, dtBad:false,
                rawDt:""};
-    if(hasDt){
+    if(useDt){
       r.date = normDate(c[idx.date]); r.min = normTime(c[idx.time]);
       r.rawDt = (c[idx.date]||"")+" "+(c[idx.time]||"");
       if(r.date===null || r.min===null) { r.dtBad = true; r.date = null; r.min = null; }
     }
     rows.push(r);
   }
-  return rows;
+  return {rows, hasDt};
 }
 // UTF-8 として読めなければ Shift_JIS として読み直す
 function decodeCSV(buf){
@@ -368,17 +423,27 @@ function decodeCSV(buf){
 // ------------------------------------------------------------------
 // 状態と集計
 // ------------------------------------------------------------------
-let DATA=makeDummy(), FILTER="ALL", SELECTED=null, FILENAME="dummy_data.csv", NEED_FIT=true;
+// タブごとに別々のCSV：エリア用（ID,郵便番号,担当者）と、訪問ルート用（ID,訪問日,開始時間,郵便番号,担当者）
+let AREA_DATA=makeDummyArea(), AREA_NAME="dummy_data.csv";
+let ROUTE_DATA=makeDummyRoute(), ROUTE_NAME="dummy_data.csv";
+let FILTER="ALL", SELECTED=null, NEED_FIT=true;
 let MODE="area", ROUTE_DATE=null;
 
-const hasRouteData = () => DATA.some(r=>r.date && r.min!==null);
+const hasRouteData = () => ROUTE_DATA.some(r=>r.date && r.min!==null);
+
+// 担当者の色は2つのCSVで共通にする（同じ名前なら同じ色）
+function staffColors(){
+  const color={};
+  [...AREA_DATA,...ROUTE_DATA].forEach(r=>{ if(!(r.staff in color)) color[r.staff]=PALETTE[Object.keys(color).length%PALETTE.length]; });
+  return color;
+}
 
 // エリア集計：数えるのは「顧客数」（同じ顧客IDは1人）
-function aggregate(){
-  const staffList=[...new Set(DATA.map(r=>r.staff))];
-  const color={}; staffList.forEach((s,i)=>color[s]=PALETTE[i%PALETTE.length]);
+function aggregate(data){
+  const staffList=[...new Set(data.map(r=>r.staff))];
+  const all=staffColors(), color={}; staffList.forEach(s=>color[s]=all[s]);
   const sets={}, unknown=[], staffSet={}, allIds=new Set(), unkIds=new Set();
-  for(const r of DATA){
+  for(const r of data){
     allIds.add(r.id);
     (staffSet[r.staff] ||= new Set()).add(r.id);
     if(!r.zip||!ZIP[r.zip]){unknown.push(r); unkIds.add(r.id); continue;}
@@ -506,13 +571,13 @@ function select(zip, fromTable){
 // 訪問ルート（直線で結ぶ。外部のルート検索は使わない）
 // ------------------------------------------------------------------
 function routeDates(){
-  return [...new Set(DATA.filter(r=>r.date && r.min!==null).map(r=>r.date))].sort();
+  return [...new Set(ROUTE_DATA.filter(r=>r.date && r.min!==null).map(r=>r.date))].sort();
 }
 // 指定日・担当者ごとに、開始時間順の訪問・訪問先（停留所）・直線距離を作る
 function buildRoutes(date, agg){
   const out={};
   for(const s of agg.staffList){
-    const rows=DATA.filter(r=>r.date===date && r.min!==null && r.staff===s)
+    const rows=ROUTE_DATA.filter(r=>r.date===date && r.min!==null && r.staff===s)
                    .sort((a,b)=>a.min-b.min || a.row-b.row);
     const visits=[], stops=[];
     let n=0, km=0;
@@ -599,7 +664,7 @@ function drawRoute(agg, fit){
 function drawRouteList(agg){
   const el=document.getElementById("routeList");
   if(!hasRouteData()){
-    el.innerHTML='<div class="empty">このCSVには「訪問日」「開始時間」の列がない（または読めない）ため、訪問ルートは表示できません。5列「ID,訪問日,開始時間,郵便番号,担当者」のCSVを選んでください。</div>';
+    el.innerHTML='<div class="empty">訪問日と開始時間が読める行がないため、訪問ルートは表示できません。「ID,訪問日,開始時間,郵便番号,担当者」の5列のCSVを選んでください（「ひな形をダウンロード」で書き方を確認できます）。</div>';
     return;
   }
   const routes=buildRoutes(ROUTE_DATE, agg);
@@ -704,7 +769,7 @@ function drawChips(agg){
 function drawStaff(agg){
   const el=document.getElementById("staff"), total=agg.customers||1;
   const per={};   // 担当者 → 郵便番号 → 顧客ID
-  for(const r of DATA){
+  for(const r of AREA_DATA){
     const k=r.zip&&ZIP[r.zip]?r.zip:"不明";
     (((per[r.staff] ||= {})[k]) ||= new Set()).add(r.id);
   }
@@ -742,7 +807,7 @@ function drawTable(agg){
 }
 function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a.toFixed(2)})`;}
 
-function drawNotice(agg){
+function drawNotice(agg, data){
   const nt=document.getElementById("notice");
   nt.className="notice";
   let h="";
@@ -753,11 +818,11 @@ function drawNotice(agg){
        `対象は東京都・埼玉県・神奈川県・千葉県の郵便番号です。</p>`+
        `<details><summary>位置不明の一覧を見る</summary><ul>${list}</ul>${agg.unknown.length>500?'<div>（先頭500件のみ表示）</div>':''}</details>`;
   }
-  const bad=DATA.filter(r=>r.dtBad);
+  const bad=data.filter(r=>r.dtBad);
   if(bad.length){
     const ex=bad.slice(0,3).map(r=>`${esc(r.id)} 「${esc(r.rawDt.trim())}」`).join("、");
     const list=bad.slice(0,500).map(r=>`<li>${r.row}行目　${esc(r.id)}：「${esc(r.rawDt.trim())}」</li>`).join("");
-    h+=`<p style="margin-top:6px">訪問日または開始時間が読めない行が <b>${bad.length}件</b> あります（例：${ex}）。訪問ルートには含めていません（エリアの顧客数には含めています）。</p>`+
+    h+=`<p style="margin-top:6px">訪問日または開始時間が読めない行が <b>${bad.length}件</b> あります（例：${ex}）。訪問ルートには含めていません。</p>`+
        `<details><summary>一覧を見る</summary><ul>${list}</ul></details>`;
   }
   if(!h){ nt.style.display="none"; return; }
@@ -765,24 +830,30 @@ function drawNotice(agg){
 }
 
 function render(fit){
-  const agg=aggregate(); LAST_AGG=agg;
+  const isArea=MODE==="area";
+  const data=isArea?AREA_DATA:ROUTE_DATA;       // 今のタブのCSV
+  const agg=aggregate(data); LAST_AGG=agg;
   if(SELECTED && !agg.byZip[SELECTED]) SELECTED=null;
   if(FILTER!=="ALL" && !agg.staffList.includes(FILTER)) FILTER="ALL";
-  document.getElementById("fname").textContent=FILENAME;
-  document.getElementById("fmeta").textContent=`${DATA.length}件を読み込み`;
-  document.getElementById("k1").textContent=agg.customers;
-  document.getElementById("k4").textContent=DATA.length;
-  document.getElementById("k2").textContent=Object.keys(agg.byZip).length;
-  document.getElementById("k3").textContent=agg.staffList.length;
+  document.getElementById("fname").textContent=isArea?AREA_NAME:ROUTE_NAME;
+  document.getElementById("fmeta").textContent=`${data.length}件を読み込み`;
+  document.getElementById("colhint").innerHTML = isArea
+    ? "このタブのCSVの列（3列）：<b>ID（顧客ID）, 郵便番号, 担当者</b>"
+    : "このタブのCSVの列（5列）：<b>ID（顧客ID）, 訪問日, 開始時間, 郵便番号, 担当者</b>";
+  const kp = isArea
+    ? [["顧客数",agg.customers],["郵便番号エリア",Object.keys(agg.byZip).length],["担当者",agg.staffList.length]]
+    : [["訪問件数",data.length],["顧客数",agg.customers],["訪問日数",routeDates().length],["担当者",agg.staffList.length]];
+  const kp_el=document.getElementById("kpis");
+  kp_el.className="kpis"+(kp.length===4?" k4":"");
+  kp_el.innerHTML=kp.map(([l,v])=>`<div class="kpi"><span>${l}</span><b>${v}</b></div>`).join("");
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.m===MODE));
-  const isArea=MODE==="area";
   document.getElementById("areaOnly").style.display = isArea ? "" : "none";
   document.getElementById("detail").style.display = isArea ? "" : "none";
   document.getElementById("routeList").style.display = isArea ? "none" : "";
   drawRouteBar();
-  drawNotice(agg); drawChips(agg); drawLegend();
+  drawNotice(agg,data); drawChips(agg); drawLegend();
   if(isArea){ drawMap(agg); drawDetail(agg); drawStaff(agg); drawTable(agg); }
-  else { drawRoute(agg, fit!==false); drawRouteList(agg); drawStaff(agg); drawTable(agg); }
+  else { drawRoute(agg, fit!==false); drawRouteList(agg); }
 }
 
 function showError(msg){
@@ -790,20 +861,35 @@ function showError(msg){
   nt.className="notice err"; nt.style.display="block"; nt.textContent=msg;
 }
 
+// 今のタブのCSVとして読み込む
 function loadRows(rows, name){
-  DATA=rows; FILENAME=name; FILTER="ALL"; SELECTED=null; NEED_FIT=true; ROUTE_DATE=null; map.closePopup(); render(true);
+  if(MODE==="area"){ AREA_DATA=rows; AREA_NAME=name; SELECTED=null; NEED_FIT=true; }
+  else { ROUTE_DATA=rows; ROUTE_NAME=name; ROUTE_DATE=null; }
+  FILTER="ALL"; map.closePopup(); render(true);
 }
 document.getElementById("file").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
+  const kind=MODE;
   f.arrayBuffer().then(buf=>{
-    const rows=parseCSV(decodeCSV(buf));
-    if(!rows.length){ showError("読み込める行がありませんでした。「ID,訪問日,開始時間,郵便番号,担当者」の5列のCSVを選んでください。"); return; }
+    const {rows,hasDt}=parseCSV(decodeCSV(buf), kind);
+    if(!rows.length){
+      showError(kind==="area" ? "読み込める行がありませんでした。「ID,郵便番号,担当者」の3列のCSVを選んでください。"
+                              : "読み込める行がありませんでした。「ID,訪問日,開始時間,郵便番号,担当者」の5列のCSVを選んでください。");
+      return;
+    }
+    if(kind==="route" && !hasDt){
+      showError("訪問ルート用のCSVには「訪問日」と「開始時間」の列が必要です（ID,訪問日,開始時間,郵便番号,担当者の5列）。3列のCSV（ID,郵便番号,担当者）は「エリア（顧客数）」タブで読み込んでください。");
+      return;
+    }
     loadRows(rows, f.name);
-  }).catch(()=>showError("ファイルを読み込めませんでした。"));
+  }).catch(()=>showError("ファイルを読み込めませんでした。"))
+    .finally(()=>{ e.target.value=""; });   // 同じファイルをもう一度選べるようにする
 });
 document.getElementById("reset").addEventListener("click",()=>{
-  document.getElementById("file").value=""; loadRows(makeDummy(),"dummy_data.csv");
+  document.getElementById("file").value="";
+  loadRows(MODE==="area" ? makeDummyArea() : makeDummyRoute(), "dummy_data.csv");
 });
+document.getElementById("tpl").addEventListener("click",()=>downloadTemplate(MODE));
 
 // 対応表を読み込んでから描画
 fetch("data/zip_coords.json")
