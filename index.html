@@ -25,22 +25,30 @@
   .file b{display:block;font-size:14px;overflow-wrap:anywhere}
   .file span{font-size:12px;color:var(--sub)}
   .btns{display:flex;gap:6px}
-  button,.upl{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink)}
+  button,.upl,select{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink)}
   .upl{background:var(--accent);color:#fff;border-color:var(--accent)}
   .upl input{display:none}
   .notice{margin-top:8px;font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 8px;display:none}
   .notice.err{color:#991b1b;background:#fef2f2;border-color:#fecaca}
-  .notice details{margin-top:4px}
+  .notice p{margin:0 0 4px}
+  .notice details{margin-top:2px}
   .notice summary{cursor:pointer}
   .notice ul{margin:4px 0 0;padding-left:18px;max-height:160px;overflow:auto}
-  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
   .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
   .kpi span{font-size:12px;color:var(--sub)}
   .kpi b{display:block;font-size:22px}
+  .tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .tab{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 12px;font-size:14px;font-weight:600;color:var(--sub)}
+  .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
   .chip{border-radius:999px;padding:5px 11px;font-size:13px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:6px}
   .chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
   .chip.on{border-color:var(--ink);background:var(--ink);color:#fff}
+  .routebar{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .routebar select{font-size:14px;font-weight:600;min-width:0;flex:1 1 150px;max-width:260px}
+  .routebar button{padding:6px 12px}
+  .routebar button:disabled{opacity:.4;cursor:default}
   .mapwrap{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#eef3f1}
   #map{height:520px;width:100%}
   .maptools{position:absolute;top:10px;right:10px;z-index:500}
@@ -82,11 +90,40 @@
   .leaflet-popup-content .ttl{font-weight:700;font-size:14px;margin-bottom:4px}
   .leaflet-popup-content .bar .nm{width:5em}
 
+  /* 訪問ルート */
+  .stop,.arrow{background:none;border:none}
+  .stop .dot{position:absolute;left:0;top:0;transform:translate(calc(-50% + var(--dx,0px)),-50%);min-width:24px;height:24px;padding:0 6px;
+             border-radius:12px;color:#fff;font-size:12px;font-weight:700;line-height:20px;text-align:center;border:2px solid #fff;
+             box-shadow:0 1px 3px rgba(0,0,0,.45);white-space:nowrap;cursor:pointer}
+  .arrow svg{position:absolute;left:0;top:0;margin:-7px 0 0 -7px;pointer-events:none}
+  .rsec{margin-top:10px}
+  .rsec .rhd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-left:5px solid var(--c,#999);padding:2px 0 2px 8px;margin-bottom:4px}
+  .rsec .rhd b{font-size:15px;overflow-wrap:anywhere}
+  .rsec .rhd span{font-size:12.5px;color:var(--sub);text-align:right}
+  .vrow{display:grid;grid-template-columns:2em 3.4em 1fr auto;gap:2px 8px;align-items:baseline;padding:6px 4px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+  .vrow:last-child{border-bottom:none}
+  .vrow:active{background:#f1f5f9}
+  .vrow .no{display:inline-grid;place-items:center;min-width:1.7em;height:1.7em;border-radius:999px;color:#fff;font-size:11.5px;font-weight:700;background:var(--c,#999)}
+  .vrow .tm{font-variant-numeric:tabular-nums;font-weight:600}
+  .vrow .wh{min-width:0;overflow-wrap:anywhere}
+  .vrow .wh small{color:var(--sub);font-size:11.5px}
+  .vrow .ds{text-align:right;font-variant-numeric:tabular-nums;color:#374151;font-size:12.5px;white-space:nowrap}
+  .vrow .ds small{display:block;color:var(--sub);font-size:11px}
+  .vrow.unk{color:var(--sub)}
+  .vrow.unk .no{background:#cbd5e1}
+  .warn{color:#b45309;font-weight:700}
+  .empty{color:var(--sub);font-size:13px;padding:6px 0}
+
   @media (max-width:520px){
     main{padding:8px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
     .kpi b{font-size:19px}
     #map{height:62vh;min-height:340px}
     .card{padding:10px 10px}
+    .tab{padding:8px 9px;font-size:13px}
+    .vrow{grid-template-columns:1.9em 3.2em 1fr;}
+    .vrow .ds{grid-column:2 / 4;text-align:left}
+    .vrow .ds small{display:inline;margin-left:6px}
   }
 </style>
 </head>
@@ -107,35 +144,48 @@
         <label class="upl">CSVを選ぶ<input type="file" id="file" accept=".csv,text/csv"></label>
       </div>
     </div>
+    <div class="small" style="margin-top:6px">CSVの列：<b>ID（顧客ID）, 訪問日, 開始時間, 郵便番号, 担当者</b></div>
     <div class="notice" id="notice"></div>
   </div>
 
   <div class="kpis" style="margin-bottom:12px">
-    <div class="kpi"><span>利用者数</span><b id="k1">-</b></div>
+    <div class="kpi"><span>顧客数</span><b id="k1">-</b></div>
+    <div class="kpi"><span>訪問件数</span><b id="k4">-</b></div>
     <div class="kpi"><span>郵便番号エリア</span><b id="k2">-</b></div>
     <div class="kpi"><span>担当者</span><b id="k3">-</b></div>
   </div>
 
   <div class="card">
-    <h2>エリアマップ</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab on" role="tab" data-m="area" type="button">エリア（顧客数）</button>
+      <button class="tab" role="tab" data-m="route" type="button">訪問ルート</button>
+    </div>
+    <div class="routebar" id="routebar" style="display:none">
+      <button id="dPrev" type="button" aria-label="前の日">◀</button>
+      <select id="dateSel" aria-label="訪問日"></select>
+      <button id="dNext" type="button" aria-label="次の日">▶</button>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="mapwrap">
-      <div id="map" role="region" aria-label="郵便番号ごとの利用者分布の地図"></div>
+      <div id="map" role="region" aria-label="担当エリアと訪問ルートの地図"></div>
       <div class="maptools"><button id="fit" type="button">全体を表示</button></div>
     </div>
-    <div class="legend">円の大きさ＝人数、色の割合＝担当者の内訳。円をタップすると内訳が出ます。拡大すると町名も表示されます。</div>
+    <div class="legend" id="legend"></div>
     <div class="detail" id="detail"><span class="small">円をタップしてください</span></div>
+    <div id="routeList" style="display:none"></div>
   </div>
 
-  <div class="card">
-    <h2>担当者ごとのまとめ</h2>
-    <div class="staffgrid" id="staff"></div>
-  </div>
+  <div id="areaOnly">
+    <div class="card">
+      <h2>担当者ごとのまとめ（顧客数）</h2>
+      <div class="staffgrid" id="staff"></div>
+    </div>
 
-  <div class="card">
-    <h2>郵便番号 × 担当者（人数）</h2>
-    <div class="tblwrap"><table id="tbl"></table></div>
-    <p class="small">行をタップすると地図がその場所へ移動します。円の位置は郵便番号ごとの代表点（町丁目の中心の平均）で、番地レベルの正確な位置ではありません。</p>
+    <div class="card">
+      <h2>郵便番号 × 担当者（顧客数）</h2>
+      <div class="tblwrap"><table id="tbl"></table></div>
+      <p class="small">行をタップすると地図がその場所へ移動します。円の位置は郵便番号ごとの代表点（町丁目の中心の平均）で、番地レベルの正確な位置ではありません。</p>
+    </div>
   </div>
 </main>
 <footer>
@@ -155,29 +205,60 @@ let ZIP = {};
 const PALETTE = ["#2563eb","#ea580c","#16a34a","#9333ea","#db2777","#0891b2","#ca8a04","#4b5563",
                  "#dc2626","#65a30d","#7c3aed","#0d9488"];
 
+// 移動時間の目安：直線距離 × 道のり係数 ÷ 平均時速（道路や高速道路は考慮しない）
+const ROAD_FACTOR = 1.3;
+const SPEED_KMH = 20;
+
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtZip = z => z.slice(0,3) + "-" + z.slice(3);
 const zipName = z => ZIP[z] ? ZIP[z][2] : "位置不明";
+const pad2 = n => String(n).padStart(2,"0");
+const fmtMin = m => pad2(Math.floor(m/60)) + ":" + pad2(m%60);
+const WEEK = "日月火水木金土";
+const dayLabel = d => d + "（" + WEEK[new Date(d+"T00:00:00Z").getUTCDay()] + "）";
+const fmtKm = km => (km < 10 ? km.toFixed(1) : Math.round(km)) + "km";
 
-// ダミーデータ生成（再現性のある乱数・架空の人物）
+// 2点間の直線距離（km）：ハバーサイン公式
+function haversineKm(a, b){
+  const R = 6371.0088, rad = Math.PI/180;
+  const dLat = (b[0]-a[0])*rad, dLng = (b[1]-a[1])*rad;
+  const h = Math.sin(dLat/2)**2 + Math.cos(a[0]*rad)*Math.cos(b[0]*rad)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+const estMinutes = km => km*ROAD_FACTOR/SPEED_KMH*60;
+
+// ダミーデータ生成（再現性のある乱数・架空の顧客と担当者）
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function makeDummy(){
   const rnd = mulberry32(42);
   const all = ["1900001","1900002","1900003","1900004","1900011","1900012","1900013","1900014",
                "1900015","1900021","1900022","1900023","1900031","1900032","1900033","1900034"];
   const plan = [
-    ["佐藤",34,["1900031","1900032","1900033","1900034"]],
-    ["鈴木",30,["1900001","1900002","1900003","1900011"]],
-    ["高橋",28,["1900012","1900013","1900021","1900022","1900023"]],
-    ["田中",22,["1900004","1900014","1900015"]]
+    ["佐藤",["1900031","1900032","1900033","1900034"]],
+    ["鈴木",["1900001","1900002","1900003","1900011"]],
+    ["高橋",["1900012","1900013","1900021","1900022","1900023"]],
+    ["田中",["1900004","1900014","1900015"]]
   ];
-  const rows=[]; let id=1001;
-  for(const [name,n,home] of plan){
-    for(let i=0;i<n;i++){
+  const days = ["2026-11-16","2026-11-17","2026-11-18","2026-11-19","2026-11-20"];
+  const rows=[]; let line=0;
+  plan.forEach(([name,home],si)=>{
+    // 担当者ごとに顧客12人（顧客IDと住所の郵便番号は固定）
+    const customers=[];
+    for(let i=0;i<12;i++){
       const pool = rnd()<0.75?home:all;
-      rows.push({id:"U"+(id++), zip:pool[Math.floor(rnd()*pool.length)], raw:"", staff:name});
+      customers.push({id:"C"+(si+1)+pad2(i+1), zip:pool[Math.floor(rnd()*pool.length)]});
     }
-  }
+    for(const d of days){
+      const n = 4+Math.floor(rnd()*3);                 // 1日4〜6件
+      const pick = customers.slice();
+      let t = 9*60 + Math.floor(rnd()*30);             // 9:00台から
+      for(let k=0;k<n;k++){
+        const c = pick.splice(Math.floor(rnd()*pick.length),1)[0];
+        rows.push({id:c.id, date:d, min:t, zip:c.zip, raw:"", staff:name, row:++line});
+        t += 45 + 15*Math.floor(rnd()*3);              // 次の訪問まで45〜75分
+      }
+    }
+  });
   return rows;
 }
 
@@ -188,6 +269,35 @@ function makeDummy(){
 function normZip(s){
   s = (s||"").normalize("NFKC").replace(/[^0-9]/g,"");
   return s.length===7 ? s : null;
+}
+// 訪問日：2026/11/20・2026-11-20・2026年11月20日・20261120・Excelのシリアル値 → "2026-11-20"
+function normDate(s){
+  s = (s||"").normalize("NFKC").trim();
+  if(!s) return null;
+  const tok = s.split(/[ T]/)[0];
+  let y,m,d,x;
+  if((x=tok.match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?$/))) { y=+x[1]; m=+x[2]; d=+x[3]; }
+  else if((x=tok.match(/^(\d{4})(\d{2})(\d{2})$/))) { y=+x[1]; m=+x[2]; d=+x[3]; }
+  else if(/^\d{5}(\.\d+)?$/.test(tok) && +tok>30000 && +tok<80000){
+    const dt = new Date(Date.UTC(1899,11,30) + Math.floor(+tok)*86400000);
+    y=dt.getUTCFullYear(); m=dt.getUTCMonth()+1; d=dt.getUTCDate();
+  } else return null;
+  const dt = new Date(Date.UTC(y,m-1,d));
+  if(dt.getUTCFullYear()!==y || dt.getUTCMonth()!==m-1 || dt.getUTCDate()!==d) return null;
+  return y+"-"+pad2(m)+"-"+pad2(d);
+}
+// 開始時間：9:00・09:00:00・0900・9時30分・Excelの時刻（0.375）→ 0時からの分
+function normTime(s){
+  s = (s||"").normalize("NFKC").trim();
+  if(!s) return null;
+  let h,mi,x;
+  if((x=s.match(/(\d{1,2}):(\d{2})/))) { h=+x[1]; mi=+x[2]; }
+  else if((x=s.match(/^(\d{1,2})時(?:(\d{1,2})分?)?$/))) { h=+x[1]; mi=x[2]?+x[2]:0; }
+  else if((x=s.match(/^(\d{3,4})$/))) { const v=x[1].padStart(4,"0"); h=+v.slice(0,2); mi=+v.slice(2); }
+  else if(/^0?\.\d+$/.test(s)) { const t=Math.round(parseFloat(s)*1440); h=Math.floor(t/60); mi=t%60; }
+  else return null;
+  if(h>24 || mi>59) return null;
+  return h*60+mi;
 }
 // ダブルクォート（中のカンマ・改行・"" エスケープ）に対応した CSV パーサ
 function parseCSVText(text){
@@ -207,17 +317,45 @@ function parseCSVText(text){
   if(f!==""||row.length){ row.push(f); rows.push(row); }
   return rows;
 }
+// 見出し行から列の位置を決める。見出しがなければ列数で決める
+//   5列以上: ID,訪問日,開始時間,郵便番号,担当者 ／ 3列: ID,郵便番号,担当者（旧形式・ルートなし）
+function detectColumns(first, hasHeader, ncols){
+  const idx = {id:-1,date:-1,time:-1,zip:-1,staff:-1};
+  if(hasHeader){
+    first.forEach((h,i)=>{
+      h = h.normalize("NFKC").toLowerCase();
+      if(idx.zip<0 && /郵便|zip|〒/.test(h)) idx.zip=i;
+      else if(idx.staff<0 && /担当|スタッフ|staff/.test(h)) idx.staff=i;
+      else if(idx.time<0 && /開始|時間|時刻|time/.test(h)) idx.time=i;
+      else if(idx.date<0 && /日|date/.test(h)) idx.date=i;
+      else if(idx.id<0 && /顧客|id|コード|番号/.test(h)) idx.id=i;
+    });
+    if(idx.zip>=0 && idx.staff>=0) { if(idx.id<0) idx.id=0; return idx; }
+  }
+  return ncols>=5 ? {id:0,date:1,time:2,zip:3,staff:4} : {id:0,date:-1,time:-1,zip:1,staff:2};
+}
 function parseCSV(text){
   const lines = parseCSVText(text.replace(/^﻿/,"")).map(r=>r.map(x=>x.trim())).filter(r=>r.some(x=>x));
   if(!lines.length) return [];
-  let start=0;
-  // 1行目が見出し（郵便番号として読めない）なら飛ばす
-  if(/郵便|zip|担当|id|番号/i.test(lines[0].join(",")) && !normZip(lines[0][1])) start=1;
+  const first = lines[0];
+  // 見出し判定：見出しらしい語を含み、郵便番号として読めるセルがない
+  const hasHeader = /ID|顧客|訪問|日付|時間|時刻|開始|郵便|担当|zip/i.test(first.join(",")) && !first.some(c=>normZip(c));
+  const maxCols = Math.max(...lines.slice(hasHeader?1:0, 50).map(r=>r.length), first.length);
+  const idx = detectColumns(first, hasHeader, maxCols);
+  const hasDt = idx.date>=0 && idx.time>=0;
   const rows=[];
-  for(let i=start;i<lines.length;i++){
+  for(let i=hasHeader?1:0;i<lines.length;i++){
     const c=lines[i];
-    if(c.length<2) continue;
-    rows.push({id:c[0]||("行"+(i+1)), zip:normZip(c[1]), raw:c[1]||"", staff:(c[2]||"").trim()||"（未設定）"});
+    if(c.length<=Math.max(idx.zip,idx.staff)) continue;
+    const r = {id:c[idx.id]||("行"+(i+1)), zip:normZip(c[idx.zip]), raw:c[idx.zip]||"",
+               staff:(c[idx.staff]||"").trim()||"（未設定）", row:i+1, date:null, min:null, dtBad:false,
+               rawDt:""};
+    if(hasDt){
+      r.date = normDate(c[idx.date]); r.min = normTime(c[idx.time]);
+      r.rawDt = (c[idx.date]||"")+" "+(c[idx.time]||"");
+      if(r.date===null || r.min===null) { r.dtBad = true; r.date = null; r.min = null; }
+    }
+    rows.push(r);
   }
   return rows;
 }
@@ -231,19 +369,29 @@ function decodeCSV(buf){
 // 状態と集計
 // ------------------------------------------------------------------
 let DATA=makeDummy(), FILTER="ALL", SELECTED=null, FILENAME="dummy_data.csv", NEED_FIT=true;
+let MODE="area", ROUTE_DATE=null;
 
+const hasRouteData = () => DATA.some(r=>r.date && r.min!==null);
+
+// エリア集計：数えるのは「顧客数」（同じ顧客IDは1人）
 function aggregate(){
   const staffList=[...new Set(DATA.map(r=>r.staff))];
   const color={}; staffList.forEach((s,i)=>color[s]=PALETTE[i%PALETTE.length]);
-  const byZip={}, unknown=[], staffCount={};
+  const sets={}, unknown=[], staffSet={}, allIds=new Set(), unkIds=new Set();
   for(const r of DATA){
-    staffCount[r.staff]=(staffCount[r.staff]||0)+1;
-    if(!r.zip||!ZIP[r.zip]){unknown.push(r);continue;}
-    (byZip[r.zip] ||= {total:0,staff:{}});
-    byZip[r.zip].total++;
-    byZip[r.zip].staff[r.staff]=(byZip[r.zip].staff[r.staff]||0)+1;
+    allIds.add(r.id);
+    (staffSet[r.staff] ||= new Set()).add(r.id);
+    if(!r.zip||!ZIP[r.zip]){unknown.push(r); unkIds.add(r.id); continue;}
+    ((sets[r.zip] ||= {})[r.staff] ||= new Set()).add(r.id);
   }
-  return {staffList,color,byZip,unknown,staffCount};
+  const byZip={};
+  for(const z in sets){
+    const staff={}; let total=0;
+    for(const s in sets[z]){ staff[s]=sets[z][s].size; total+=staff[s]; }
+    byZip[z]={total,staff};
+  }
+  const staffCount={}; staffList.forEach(s=>staffCount[s]=staffSet[s].size);
+  return {staffList,color,byZip,unknown,staffCount,customers:allIds.size,unknownCustomers:unkIds.size};
 }
 
 // ------------------------------------------------------------------
@@ -254,7 +402,8 @@ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
   maxZoom:19,
   attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
 }).addTo(map);
-const layer = L.layerGroup().addTo(map);
+const areaLayer = L.layerGroup().addTo(map);
+const routeLayer = L.layerGroup();
 const markers = {};
 let LAST_AGG = null;
 
@@ -298,7 +447,7 @@ function pieIcon(zip, v, agg){
 
 function breakdownHTML(zip, agg){
   const v=agg.byZip[zip], z=ZIP[zip];
-  let h=`<div class="ttl">〒${fmtZip(zip)} ${esc(z[2])}　<span class="small">計 ${v.total}人</span></div>`;
+  let h=`<div class="ttl">〒${fmtZip(zip)} ${esc(z[2])}　<span class="small">顧客 計${v.total}人</span></div>`;
   for(const s of agg.staffList){
     const n=v.staff[s]||0; if(!n) continue;
     h+=`<div class="bar"><span class="nm" title="${esc(s)}">${esc(s)}</span><span class="tr"><span class="fl" style="width:${n/v.total*100}%;background:${agg.color[s]}"></span></span><span class="n">${n}人</span></div>`;
@@ -308,7 +457,7 @@ function breakdownHTML(zip, agg){
 }
 
 function drawMap(agg){
-  layer.clearLayers();
+  areaLayer.clearLayers();
   for(const k in markers) delete markers[k];
   // 人数の少ない円を上に重ねる（大きい円の下に隠れないように）
   const entries=Object.entries(agg.byZip).sort((a,b)=>b[1].total-a[1].total);
@@ -316,24 +465,27 @@ function drawMap(agg){
     const z=ZIP[zip];
     const count = FILTER==="ALL"? v.total : (v.staff[FILTER]||0);
     const m=L.marker([z[0],z[1]],{icon:pieIcon(zip,v,agg), zIndexOffset: count? i : -100000,
-                                   title:`〒${fmtZip(zip)} ${z[2]} ${count}人`, riseOnHover:true});
+                                   title:`〒${fmtZip(zip)} ${z[2]} 顧客${count}人`, riseOnHover:true});
     m.bindPopup(()=>breakdownHTML(zip,agg),{autoPanPadding:[20,20]});
     m.on("click",()=>select(zip,false));
-    m.addTo(layer);
+    m.addTo(areaLayer);
     markers[zip]=m;
   });
   if(NEED_FIT){ fitAll(agg); NEED_FIT=false; }
 }
-function fitAll(agg){
-  agg = agg || LAST_AGG;
+function fitPoints(pts){
   map.invalidateSize();
-  const pts=Object.keys(agg.byZip).map(z=>[ZIP[z][0],ZIP[z][1]]);
   if(pts.length===1) map.setView(pts[0],14);
   else if(pts.length) map.fitBounds(pts,{padding:[30,30],maxZoom:15});
 }
+function fitAll(agg){
+  if(MODE==="route"){ fitRoute(); return; }
+  agg = agg || LAST_AGG;
+  fitPoints(Object.keys(agg.byZip).map(z=>[ZIP[z][0],ZIP[z][1]]));
+}
 document.getElementById("fit").addEventListener("click",()=>fitAll());
 
-// 円・表の行を選んだとき
+// 円・表の行を選んだとき（エリアタブ）
 function select(zip, fromTable){
   const prev=SELECTED; SELECTED=zip;
   const agg=LAST_AGG;
@@ -351,8 +503,178 @@ function select(zip, fromTable){
 }
 
 // ------------------------------------------------------------------
-// そのほかの表示（試作版と同じ）
+// 訪問ルート（直線で結ぶ。外部のルート検索は使わない）
 // ------------------------------------------------------------------
+function routeDates(){
+  return [...new Set(DATA.filter(r=>r.date && r.min!==null).map(r=>r.date))].sort();
+}
+// 指定日・担当者ごとに、開始時間順の訪問・訪問先（停留所）・直線距離を作る
+function buildRoutes(date, agg){
+  const out={};
+  for(const s of agg.staffList){
+    const rows=DATA.filter(r=>r.date===date && r.min!==null && r.staff===s)
+                   .sort((a,b)=>a.min-b.min || a.row-b.row);
+    const visits=[], stops=[];
+    let n=0, km=0;
+    for(const r of rows){
+      const located = !!(r.zip && ZIP[r.zip]);
+      const v={r, located, no:null, stop:null, leg:null};
+      if(located){
+        v.no=++n;
+        const last=stops[stops.length-1];
+        if(last && last.zip===r.zip){ last.visits.push(v); v.stop=last; }
+        else{
+          const st={zip:r.zip, ll:[ZIP[r.zip][0],ZIP[r.zip][1]], visits:[v], leg:null, warn:null};
+          if(last){
+            st.leg=haversineKm(last.ll, st.ll); km+=st.leg;
+            const need=estMinutes(st.leg), gap=r.min-last.visits[last.visits.length-1].r.min;
+            if(need>gap) st.warn=`直線から見た移動時間の目安（約${Math.round(need)}分）が、前の訪問との開始時間の間隔（${gap}分）より長くなっています`;
+          }
+          stops.push(st); v.stop=st;
+        }
+        v.leg = (v.stop.visits[0]===v) ? v.stop.leg : null;
+      }
+      visits.push(v);
+    }
+    out[s]={rows,visits,stops,km};
+  }
+  return out;
+}
+
+const stopLabel = st => {
+  const ns=st.visits.map(v=>v.no);
+  return ns.length<=3 ? ns.join("・") : ns[0]+"〜"+ns[ns.length-1];
+};
+function stopPopup(st, staff, agg){
+  let h=`<div class="ttl">${esc(staff)}　${stopLabel(st)}番目</div><div>〒${fmtZip(st.zip)} ${esc(zipName(st.zip))}</div>`;
+  for(const v of st.visits) h+=`<div class="small">${fmtMin(v.r.min)}　顧客 ${esc(v.r.id)}</div>`;
+  if(st.leg!==null) h+=`<div class="small">前の訪問先から 直線${fmtKm(st.leg)}</div>`;
+  return h;
+}
+
+let ROUTE_VIEW = [];   // 地図に出している停留所の座標（全体表示用）
+function fitRoute(){ fitPoints(ROUTE_VIEW); }
+// 向き（北から時計回りの角度）。地図の投影（メルカトル）上で計算するので画面の向きと一致する
+function bearingDeg(a,b){
+  const p=L.Projection.SphericalMercator;
+  const pa=p.project(L.latLng(a[0],a[1])), pb=p.project(L.latLng(b[0],b[1]));
+  return Math.atan2(pb.x-pa.x, pb.y-pa.y)*180/Math.PI;
+}
+
+function drawRoute(agg, fit){
+  routeLayer.clearLayers();
+  ROUTE_VIEW=[];
+  if(!ROUTE_DATE) return;
+  const routes=buildRoutes(ROUTE_DATE, agg);
+  const show=agg.staffList.filter(s=>FILTER==="ALL"||s===FILTER);
+  show.forEach((s,si)=>{
+    const R=routes[s], col=agg.color[s];
+    if(!R.stops.length) return;
+    const lls=R.stops.map(st=>st.ll);
+    lls.forEach(p=>ROUTE_VIEW.push(p));
+    if(lls.length>1){
+      L.polyline(lls,{color:"#fff",weight:8,opacity:.9,interactive:false}).addTo(routeLayer);
+      L.polyline(lls,{color:col,weight:4,opacity:.95,interactive:false}).addTo(routeLayer);
+      for(let i=1;i<R.stops.length;i++){
+        const a=R.stops[i-1].ll, b=R.stops[i].ll;
+        if(haversineKm(a,b)<0.1) continue;
+        const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2], deg=bearingDeg(a,b).toFixed(1);
+        const html=`<svg width="14" height="14" viewBox="0 0 14 14" style="transform:rotate(${deg}deg)"><path d="M7 1L12.5 12.5L7 9.7L1.5 12.5Z" fill="${col}" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+        L.marker(mid,{icon:L.divIcon({className:"arrow",html,iconSize:null}),interactive:false,keyboard:false,zIndexOffset:-500}).addTo(routeLayer);
+      }
+    }
+    // 担当者が複数いるとき、同じ場所の番号が重ならないよう横に少しずらして表示する
+    const dx = FILTER==="ALL" ? (si-(show.length-1)/2)*10 : 0;
+    R.stops.forEach(st=>{
+      const html=`<div class="dot" style="background:${col};--dx:${dx}px">${stopLabel(st)}</div>`;
+      const m=L.marker(st.ll,{icon:L.divIcon({className:"stop",html,iconSize:null}),zIndexOffset:1000+si,
+                              title:`${s} ${stopLabel(st)}番目 〒${fmtZip(st.zip)}`});
+      m.bindPopup(()=>stopPopup(st,s,agg),{autoPanPadding:[20,20]});
+      m.addTo(routeLayer);
+    });
+  });
+  if(fit) fitRoute();
+}
+
+function drawRouteList(agg){
+  const el=document.getElementById("routeList");
+  if(!hasRouteData()){
+    el.innerHTML='<div class="empty">このCSVには「訪問日」「開始時間」の列がない（または読めない）ため、訪問ルートは表示できません。5列「ID,訪問日,開始時間,郵便番号,担当者」のCSVを選んでください。</div>';
+    return;
+  }
+  const routes=buildRoutes(ROUTE_DATE, agg);
+  const show=agg.staffList.filter(s=>(FILTER==="ALL"||s===FILTER) && routes[s].rows.length);
+  if(!show.length){ el.innerHTML='<div class="empty">この日の訪問はありません。</div>'; return; }
+  let h="", total=0, totalVisits=0;
+  for(const s of show){
+    const R=routes[s], col=agg.color[s];
+    total+=R.km; totalVisits+=R.rows.length;
+    h+=`<div class="rsec" style="--c:${col}"><div class="rhd"><b>${esc(s)}</b>`+
+       `<span>${R.rows.length}件・直線 計${fmtKm(R.km)}<br>移動時間の目安 約${Math.round(estMinutes(R.km))}分</span></div>`;
+    R.visits.forEach((v,i)=>{
+      const r=v.r, st=v.stop;
+      let ds="";
+      if(!v.located) ds="";
+      else if(v.leg!==null) ds=`${fmtKm(v.leg)}${st.warn?` <span class="warn" title="${esc(st.warn)}">⚠間に合わない目安</span>`:""}<small>約${Math.round(estMinutes(v.leg))}分</small>`;
+      else if(st.visits[0]!==v) ds='<small>同じ場所</small>';
+      else ds='<small>出発</small>';
+      h+=`<div class="vrow ${v.located?"":"unk"}" data-s="${i}" data-staff="${esc(s)}">`+
+         `<span><span class="no">${v.located?v.no:"–"}</span></span>`+
+         `<span class="tm">${fmtMin(r.min)}</span>`+
+         `<span class="wh">顧客 ${esc(r.id)}<br><small>${v.located?`〒${fmtZip(r.zip)} ${esc(zipName(r.zip))}`:"位置不明（"+(r.zip?fmtZip(r.zip)+"は対応表にありません":"「"+esc(r.raw)+"」は郵便番号として読めません")+"）"}</small></span>`+
+         `<span class="ds">${ds}</span></div>`;
+    });
+    h+=`</div>`;
+  }
+  if(show.length>1) h+=`<div class="small" style="margin-top:10px">全員の直線距離の合計：${fmtKm(total)}（${totalVisits}件）</div>`;
+  el.innerHTML=h;
+  el.querySelectorAll(".vrow").forEach(row=>row.addEventListener("click",()=>{
+    const v=routes[row.dataset.staff].visits[+row.dataset.s];
+    if(!v.located) return;
+    map.setView(v.stop.ll, Math.max(map.getZoom(),14));
+    L.popup({autoPanPadding:[20,20]}).setLatLng(v.stop.ll).setContent(stopPopup(v.stop,row.dataset.staff,agg)).openOn(map);
+    document.getElementById("map").scrollIntoView({behavior:"smooth",block:"center"});
+  }));
+}
+
+function drawRouteBar(){
+  const dates=routeDates(), sel=document.getElementById("dateSel");
+  const bar=document.getElementById("routebar");
+  bar.style.display = (MODE==="route" && dates.length) ? "flex" : "none";
+  if(ROUTE_DATE && !dates.includes(ROUTE_DATE)) ROUTE_DATE=null;
+  if(!ROUTE_DATE) ROUTE_DATE=dates[dates.length-1]||null;   // 初期値は最も新しい日
+  sel.innerHTML=dates.map(d=>`<option value="${d}" ${d===ROUTE_DATE?"selected":""}>${dayLabel(d)}</option>`).join("");
+  const i=dates.indexOf(ROUTE_DATE);
+  document.getElementById("dPrev").disabled = i<=0;
+  document.getElementById("dNext").disabled = i<0 || i>=dates.length-1;
+}
+function moveDate(step){
+  const dates=routeDates(), i=dates.indexOf(ROUTE_DATE)+step;
+  if(i<0||i>=dates.length) return;
+  ROUTE_DATE=dates[i]; map.closePopup(); render(true);
+}
+document.getElementById("dPrev").addEventListener("click",()=>moveDate(-1));
+document.getElementById("dNext").addEventListener("click",()=>moveDate(1));
+document.getElementById("dateSel").addEventListener("change",e=>{ROUTE_DATE=e.target.value; map.closePopup(); render(true);});
+
+// ------------------------------------------------------------------
+// タブ・そのほかの表示
+// ------------------------------------------------------------------
+function setMode(m){
+  if(m===MODE) return;
+  MODE=m; map.closePopup();
+  if(m==="route"){ map.removeLayer(areaLayer); map.addLayer(routeLayer); }
+  else { map.removeLayer(routeLayer); map.addLayer(areaLayer); NEED_FIT=true; }
+  render(true);
+}
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.m)));
+
+function drawLegend(){
+  document.getElementById("legend").textContent = MODE==="area"
+    ? "円の大きさ＝顧客数、色の割合＝担当者の内訳（同じ顧客IDは1人と数えます）。円をタップすると内訳が出ます。拡大すると町名も表示されます。"
+    : "訪問日ごとに、開始時間の順に直線で結んでいます（番号＝訪問順、矢印＝進む向き）。距離は地図上の直線距離で、道路や高速道路は考慮していません。時間は目安（直線×"+ROAD_FACTOR+"÷時速"+SPEED_KMH+"km）です。";
+}
+
 function drawDetail(agg){
   const el=document.getElementById("detail");
   if(!SELECTED||!agg.byZip[SELECTED]){el.innerHTML='<span class="small">円をタップしてください</span>';return;}
@@ -361,29 +683,40 @@ function drawDetail(agg){
 
 function drawChips(agg){
   const el=document.getElementById("chips");
-  let h=`<button class="chip ${FILTER==="ALL"?"on":""}" data-f="ALL">全員 ${DATA.length}</button>`;
+  let counts, all, unit;
+  if(MODE==="route"){
+    const rt = ROUTE_DATE ? buildRoutes(ROUTE_DATE,agg) : {};
+    counts={}; all=0;
+    agg.staffList.forEach(s=>{counts[s]=rt[s]?rt[s].rows.length:0; all+=counts[s];});
+    unit="件";
+  }else{ counts=agg.staffCount; all=agg.customers; unit=""; }
+  let h=`<button class="chip ${FILTER==="ALL"?"on":""}" data-f="ALL">全員 ${all}${unit}</button>`;
   agg.staffList.forEach((s,i)=>{
-    h+=`<button class="chip ${FILTER===s?"on":""}" data-i="${i}"><i style="background:${agg.color[s]}"></i>${esc(s)} ${agg.staffCount[s]}</button>`;
+    h+=`<button class="chip ${FILTER===s?"on":""}" data-i="${i}"><i style="background:${agg.color[s]}"></i>${esc(s)} ${counts[s]}${unit}</button>`;
   });
   el.innerHTML=h;
   el.querySelectorAll(".chip").forEach(b=>b.addEventListener("click",()=>{
     FILTER = b.dataset.f==="ALL" ? "ALL" : agg.staffList[+b.dataset.i];
-    render();
+    render(MODE==="route");
   }));
 }
 
 function drawStaff(agg){
-  const el=document.getElementById("staff"), total=DATA.length||1;
+  const el=document.getElementById("staff"), total=agg.customers||1;
+  const per={};   // 担当者 → 郵便番号 → 顧客ID
+  for(const r of DATA){
+    const k=r.zip&&ZIP[r.zip]?r.zip:"不明";
+    (((per[r.staff] ||= {})[k]) ||= new Set()).add(r.id);
+  }
   let h="";
   for(const s of agg.staffList){
-    const mine=DATA.filter(r=>r.staff===s);
-    const cnt={}; mine.forEach(r=>{const k=r.zip&&ZIP[r.zip]?r.zip:"不明"; cnt[k]=(cnt[k]||0)+1;});
-    const areas=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+    const areas=Object.entries(per[s]).map(([z,set])=>[z,set.size]).sort((a,b)=>b[1]-a[1]);
     const nAreas=areas.filter(([z])=>z!=="不明").length;
     const top=areas.slice(0,3).map(([z,n])=>`<li>${z==="不明"?"位置不明":esc(zipName(z))}　${n}人</li>`).join("");
+    const mine=agg.staffCount[s];
     h+=`<div class="staff" style="border-left-color:${agg.color[s]}">
-      <div class="hd"><b>${esc(s)}</b><span>${mine.length}<small style="font-size:12px;font-weight:400">人</small></span></div>
-      <div class="small">全体の${(mine.length/total*100).toFixed(0)}%・${nAreas}エリア</div>
+      <div class="hd"><b>${esc(s)}</b><span>${mine}<small style="font-size:12px;font-weight:400">人</small></span></div>
+      <div class="small">全顧客の${(mine/total*100).toFixed(0)}%・${nAreas}エリア</div>
       <ol>${top}</ol></div>`;
   }
   el.innerHTML=h;
@@ -402,8 +735,8 @@ function drawTable(agg){
     }
     h+=`<td><b>${v.total}</b></td></tr>`;
   }
-  const located=s=>DATA.filter(r=>r.staff===s&&r.zip&&ZIP[r.zip]).length;
-  h+="</tbody><tfoot><tr><td>合計</td>"+agg.staffList.map(s=>`<td>${located(s)}</td>`).join("")+`<td>${DATA.length-agg.unknown.length}</td></tr></tfoot>`;
+  const colSum=s=>entries.reduce((a,[,v])=>a+(v.staff[s]||0),0);
+  h+="</tbody><tfoot><tr><td>合計</td>"+agg.staffList.map(s=>`<td>${colSum(s)}</td>`).join("")+`<td>${entries.reduce((a,[,v])=>a+v.total,0)}</td></tr></tfoot>`;
   el.innerHTML=h;
   el.querySelectorAll("tbody tr").forEach(tr=>tr.addEventListener("click",()=>select(tr.dataset.zip,true)));
 }
@@ -412,24 +745,44 @@ function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${n>>16},${n
 function drawNotice(agg){
   const nt=document.getElementById("notice");
   nt.className="notice";
-  if(!agg.unknown.length){ nt.style.display="none"; return; }
-  const ex=agg.unknown.slice(0,3).map(r=>`${esc(r.id)} ${r.zip?fmtZip(r.zip):("「"+esc(r.raw)+"」形式不正")}`).join("、");
-  const list=agg.unknown.slice(0,500).map(r=>`<li>${esc(r.id)}：${r.zip?fmtZip(r.zip)+"（対応表にない郵便番号）":"「"+esc(r.raw)+"」（郵便番号として読めません）"}・${esc(r.staff)}</li>`).join("");
-  nt.style.display="block";
-  nt.innerHTML=`位置不明が <b>${agg.unknown.length}件</b> あります（例：${ex}）。地図と表には含めていません。`+
-    `対象は東京都・埼玉県・神奈川県・千葉県の郵便番号です。`+
-    `<details><summary>位置不明の一覧を見る</summary><ul>${list}</ul>${agg.unknown.length>500?'<div>（先頭500件のみ表示）</div>':''}</details>`;
+  let h="";
+  if(agg.unknown.length){
+    const ex=agg.unknown.slice(0,3).map(r=>`${esc(r.id)} ${r.zip?fmtZip(r.zip):("「"+esc(r.raw)+"」形式不正")}`).join("、");
+    const list=agg.unknown.slice(0,500).map(r=>`<li>${esc(r.id)}：${r.zip?fmtZip(r.zip)+"（対応表にない郵便番号）":"「"+esc(r.raw)+"」（郵便番号として読めません）"}・${esc(r.staff)}</li>`).join("");
+    h+=`<p>位置不明が <b>${agg.unknown.length}件</b>（顧客${agg.unknownCustomers}人）あります（例：${ex}）。地図・ルートには含めていません。`+
+       `対象は東京都・埼玉県・神奈川県・千葉県の郵便番号です。</p>`+
+       `<details><summary>位置不明の一覧を見る</summary><ul>${list}</ul>${agg.unknown.length>500?'<div>（先頭500件のみ表示）</div>':''}</details>`;
+  }
+  const bad=DATA.filter(r=>r.dtBad);
+  if(bad.length){
+    const ex=bad.slice(0,3).map(r=>`${esc(r.id)} 「${esc(r.rawDt.trim())}」`).join("、");
+    const list=bad.slice(0,500).map(r=>`<li>${r.row}行目　${esc(r.id)}：「${esc(r.rawDt.trim())}」</li>`).join("");
+    h+=`<p style="margin-top:6px">訪問日または開始時間が読めない行が <b>${bad.length}件</b> あります（例：${ex}）。訪問ルートには含めていません（エリアの顧客数には含めています）。</p>`+
+       `<details><summary>一覧を見る</summary><ul>${list}</ul></details>`;
+  }
+  if(!h){ nt.style.display="none"; return; }
+  nt.style.display="block"; nt.innerHTML=h;
 }
 
-function render(){
+function render(fit){
   const agg=aggregate(); LAST_AGG=agg;
   if(SELECTED && !agg.byZip[SELECTED]) SELECTED=null;
+  if(FILTER!=="ALL" && !agg.staffList.includes(FILTER)) FILTER="ALL";
   document.getElementById("fname").textContent=FILENAME;
   document.getElementById("fmeta").textContent=`${DATA.length}件を読み込み`;
-  document.getElementById("k1").textContent=DATA.length;
+  document.getElementById("k1").textContent=agg.customers;
+  document.getElementById("k4").textContent=DATA.length;
   document.getElementById("k2").textContent=Object.keys(agg.byZip).length;
   document.getElementById("k3").textContent=agg.staffList.length;
-  drawNotice(agg); drawChips(agg); drawMap(agg); drawDetail(agg); drawStaff(agg); drawTable(agg);
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.m===MODE));
+  const isArea=MODE==="area";
+  document.getElementById("areaOnly").style.display = isArea ? "" : "none";
+  document.getElementById("detail").style.display = isArea ? "" : "none";
+  document.getElementById("routeList").style.display = isArea ? "none" : "";
+  drawRouteBar();
+  drawNotice(agg); drawChips(agg); drawLegend();
+  if(isArea){ drawMap(agg); drawDetail(agg); drawStaff(agg); drawTable(agg); }
+  else { drawRoute(agg, fit!==false); drawRouteList(agg); drawStaff(agg); drawTable(agg); }
 }
 
 function showError(msg){
@@ -437,17 +790,19 @@ function showError(msg){
   nt.className="notice err"; nt.style.display="block"; nt.textContent=msg;
 }
 
+function loadRows(rows, name){
+  DATA=rows; FILENAME=name; FILTER="ALL"; SELECTED=null; NEED_FIT=true; ROUTE_DATE=null; map.closePopup(); render(true);
+}
 document.getElementById("file").addEventListener("change",e=>{
   const f=e.target.files[0]; if(!f) return;
   f.arrayBuffer().then(buf=>{
     const rows=parseCSV(decodeCSV(buf));
-    if(!rows.length){ showError("読み込める行がありませんでした。「ID,郵便番号,担当者」の3列のCSVを選んでください。"); return; }
-    DATA=rows; FILENAME=f.name; FILTER="ALL"; SELECTED=null; NEED_FIT=true; render();
+    if(!rows.length){ showError("読み込める行がありませんでした。「ID,訪問日,開始時間,郵便番号,担当者」の5列のCSVを選んでください。"); return; }
+    loadRows(rows, f.name);
   }).catch(()=>showError("ファイルを読み込めませんでした。"));
 });
 document.getElementById("reset").addEventListener("click",()=>{
-  DATA=makeDummy(); FILENAME="dummy_data.csv"; FILTER="ALL"; SELECTED=null; NEED_FIT=true;
-  document.getElementById("file").value=""; render();
+  document.getElementById("file").value=""; loadRows(makeDummy(),"dummy_data.csv");
 });
 
 // 対応表を読み込んでから描画
